@@ -60,15 +60,7 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
-      - name: Create Linux Tarballs
-        if: matrix.platform == 'ubuntu-22.04'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cd src-tauri/target/release
-          tar -czvf anon-studio-nce-linux.tar.gz anon-studio-nce
-          tar -cJvf anon-studio-nce-linux.tar.xz anon-studio-nce
-          gh release upload ${{ steps.tauri.outputs.releaseId }} anon-studio-nce-linux.tar.gz anon-studio-nce-linux.tar.xz
+
 
   build-android:
     runs-on: ubuntu-latest
