@@ -63,6 +63,7 @@ jobs:
 
 
   build-android:
+    needs: build-tauri
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -105,8 +106,9 @@ jobs:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
         run: cargo tauri android build --apk
         
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: anon-studio-nce-apk
-          path: src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
+      - name: Upload APK to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -e "console.log(require('./src-tauri/tauri.conf.json').version)")
+          gh release upload "app-v$VERSION" src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk --clobber
