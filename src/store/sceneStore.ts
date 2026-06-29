@@ -18,31 +18,12 @@ export type GameObject = {
   textureId?: string;
 };
 
-export type Condition = {
-  id: string;
-  type: string;
-  params: Record<string, any>;
-};
-
-export type Action = {
-  id: string;
-  type: string;
-  params: Record<string, any>;
-};
-
-export type EventBlock = {
-  id: string;
-  conditions: Condition[];
-  actions: Action[];
-  subEvents: EventBlock[];
-};
-
 interface SceneState {
   objects: GameObject[];
   assets: Asset[];
   globalVariables: Record<string, number>;
   selectedIds: string[];
-  events: EventBlock[];
+  code: string;
   isPlaying: boolean;
   
   addObject: (obj: GameObject) => void;
@@ -56,12 +37,7 @@ interface SceneState {
 
   setGlobalVariable: (key: string, value: number) => void;
 
-  addEventBlock: () => void;
-  removeEventBlock: (id: string) => void;
-  addCondition: (eventId: string, condition: Omit<Condition, 'id'>) => void;
-  addAction: (eventId: string, action: Omit<Action, 'id'>) => void;
-  removeCondition: (eventId: string, conditionId: string) => void;
-  removeAction: (eventId: string, actionId: string) => void;
+  setCode: (code: string) => void;
   
   setIsPlaying: (playing: boolean) => void;
 }
@@ -72,15 +48,22 @@ const generateWorld = (): GameObject[] => {
   return [];
 };
 
-// Start completely blank
-const defaultEvents: EventBlock[] = [];
+const defaultCode = `// A# (A Sharp) Game Scripting
+// Access objects via global array: objects
+// Access variables via global array: variables
+
+function update() {
+  // Add your logic here
+  
+}
+`;
 
 export const useSceneStore = create<SceneState>((set) => ({
   objects: generateWorld(),
   assets: defaultAssets,
   globalVariables: { Score: 0 },
   selectedIds: [],
-  events: defaultEvents,
+  code: defaultCode,
   isPlaying: false,
   
   addObject: (obj) => set((state) => ({ objects: [...state.objects, obj] })),
@@ -103,36 +86,7 @@ export const useSceneStore = create<SceneState>((set) => ({
 
   setGlobalVariable: (key, value) => set((state) => ({ globalVariables: { ...state.globalVariables, [key]: value } })),
 
-  addEventBlock: () => set((state) => ({
-    events: [...state.events, { id: `evt-${Date.now()}`, conditions: [], actions: [], subEvents: [] }]
-  })),
-  removeEventBlock: (id) => set((state) => ({
-    events: state.events.filter(e => e.id !== id)
-  })),
-  addCondition: (eventId, condition) => set((state) => ({
-    events: state.events.map(e => e.id === eventId 
-      ? { ...e, conditions: [...e.conditions, { ...condition, id: `cond-${Date.now()}` }] }
-      : e
-    )
-  })),
-  addAction: (eventId, action) => set((state) => ({
-    events: state.events.map(e => e.id === eventId 
-      ? { ...e, actions: [...e.actions, { ...action, id: `act-${Date.now()}` }] }
-      : e
-    )
-  })),
-  removeCondition: (eventId, conditionId) => set((state) => ({
-    events: state.events.map(e => e.id === eventId 
-      ? { ...e, conditions: e.conditions.filter(c => c.id !== conditionId) }
-      : e
-    )
-  })),
-  removeAction: (eventId, actionId) => set((state) => ({
-    events: state.events.map(e => e.id === eventId 
-      ? { ...e, actions: e.actions.filter(a => a.id !== actionId) }
-      : e
-    )
-  })),
-  
-  setIsPlaying: (playing) => set({ isPlaying: playing }),
+  setCode: (code) => set({ code }),
+
+  setIsPlaying: (isPlaying) => set({ isPlaying })
 }));

@@ -1,15 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { useSceneStore } from '../../store/sceneStore';
 import { X, Download, Monitor, Smartphone, Globe, Package } from 'lucide-react';
 
-interface ExportMenuProps {
-  onClose: () => void;
-}
-
-export function ExportMenu({ onClose }: ExportMenuProps) {
+export function ExportMenu({ onClose }: { onClose: () => void }) {
   const [gameName, setGameName] = useState('My Awesome Game');
+  const { objects, code, assets, globalVariables } = useSceneStore();
   const [platforms, setPlatforms] = useState({
     windows: true,
     linux: true,
@@ -17,8 +14,6 @@ export function ExportMenu({ onClose }: ExportMenuProps) {
     web: true,
   });
   const [isExporting, setIsExporting] = useState(false);
-  
-  const { objects, events } = useSceneStore();
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -26,26 +21,48 @@ export function ExportMenu({ onClose }: ExportMenuProps) {
     try {
       const zip = new JSZip();
       
-      // Core Game Engine HTML bundle
+      const objectsJson = JSON.stringify(objects);
+      const assetsJson = JSON.stringify(assets);
+      const varsJson = JSON.stringify(globalVariables);
+      let codeStr = "";
+      try {
+        codeStr = code;
+      } catch (e) {}
+
       const gameHtml = `<!DOCTYPE html>
 <html>
 <head>
-  <title>${gameName}</title>
-  <style>
-    body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-    canvas { background: #1a1a1a; }
-  </style>
+    <title>${gameName}</title>
+    <style>body { margin: 0; padding: 0; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }</style>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
 </head>
 <body>
-  <div id="game-container"></div>
-  <script>
-    // A# Engine Runtime Simulation
-    const gameData = ${JSON.stringify({ objects, events })};
-    console.log("Game Loaded:", gameData);
-    
-    const container = document.getElementById('game-container');
-    container.innerHTML = '<h1 style="color:white; font-family:sans-serif;">' + ${JSON.stringify(gameName)} + '</h1>';
-  </script>
+    <div id="game"></div>
+    <script>
+      const gameObjects = ${objectsJson};
+      const gameAssets = ${assetsJson};
+      const initialVars = ${varsJson};
+      const userCode = \`${codeStr.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
+      
+      const config = {
+          type: Phaser.AUTO,
+          parent: 'game',
+          width: 800,
+          height: 600,
+          scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+          backgroundColor: '#87CEEB',
+          physics: { default: 'arcade', arcade: { gravity: { y: 800, x: 0 } } },
+          scene: {
+              preload: function() {
+                  gameAssets.forEach(a => this.load.image(a.id, a.dataUrl));
+              },
+              create: function() {
+                  this.add.text(400, 300, "${gameName}\\nPowered by Anon Studio CE", { fontSize: '32px', color: '#ffffff', align: 'center' }).setOrigin(0.5);
+              }
+          }
+      };
+      new Phaser.Game(config);
+    </script>
 </body>
 </html>`;
 
@@ -56,8 +73,6 @@ export function ExportMenu({ onClose }: ExportMenuProps) {
 
       // 2. Windows Export (Wrapper)
       if (platforms.windows) {
-        // In a real scenario, this downloads the pre-compiled NW.js/Tauri wrapper
-        // and injects the HTML into it. For now, we mock the output wrapper package.
         zip.file(`${gameName}-Windows/package.nw/index.html`, gameHtml);
         zip.file(`${gameName}-Windows/package.json`, JSON.stringify({
           name: gameName.toLowerCase().replace(/ /g, '-'),
@@ -125,14 +140,41 @@ export function ExportMenu({ onClose }: ExportMenuProps) {
 
           {/* Platforms */}
           <label style={{ display: 'block', fontSize: 14, color: '#d1d5db', marginBottom: 16, fontWeight: 500 }}>Select Target Platforms</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             
+            {/* Windows */}
+            <label style={{ display: 'flex', alignItems: 'flex-start', padding: 16, borderRadius: 12, border: platforms.windows ? '1px solid #7b61ff' : '1px solid rgba(255,255,255,0.05)', backgroundColor: platforms.windows ? 'rgba(123, 97, 255, 0.1)' : '#141418', cursor: 'pointer' }}>
+              <input type="checkbox" checked={platforms.windows} onChange={() => togglePlatform('windows')} style={{ marginTop: 4, cursor: 'pointer' }} />
+              <div style={{ marginLeft: 12, display: 'flex', flexDirection: 'column' }}>
+                <span style={{ color: 'white', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}><Monitor size={16} /> Windows (.exe)</span>
+                <span style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Standalone native Windows installer</span>
+              </div>
+            </label>
+
+            {/* Linux */}
+            <label style={{ display: 'flex', alignItems: 'flex-start', padding: 16, borderRadius: 12, border: platforms.linux ? '1px solid #7b61ff' : '1px solid rgba(255,255,255,0.05)', backgroundColor: platforms.linux ? 'rgba(123, 97, 255, 0.1)' : '#141418', cursor: 'pointer' }}>
+              <input type="checkbox" checked={platforms.linux} onChange={() => togglePlatform('linux')} style={{ marginTop: 4, cursor: 'pointer' }} />
+              <div style={{ marginLeft: 12, display: 'flex', flexDirection: 'column' }}>
+                <span style={{ color: 'white', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}><Monitor size={16} /> Linux</span>
+                <span style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>AppImage, tar.gz, tar.xz wrappers</span>
+              </div>
+            </label>
+
+            {/* Android */}
+            <label style={{ display: 'flex', alignItems: 'flex-start', padding: 16, borderRadius: 12, border: platforms.android ? '1px solid #00d2ff' : '1px solid rgba(255,255,255,0.05)', backgroundColor: platforms.android ? 'rgba(0, 210, 255, 0.1)' : '#141418', cursor: 'pointer' }}>
+              <input type="checkbox" checked={platforms.android} onChange={() => togglePlatform('android')} style={{ marginTop: 4, cursor: 'pointer' }} />
+              <div style={{ marginLeft: 12, display: 'flex', flexDirection: 'column' }}>
+                <span style={{ color: 'white', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}><Smartphone size={16} /> Android (.apk)</span>
+                <span style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Universal APK package for mobile</span>
+              </div>
+            </label>
+
             {/* Web */}
             <label style={{ display: 'flex', alignItems: 'flex-start', padding: 16, borderRadius: 12, border: platforms.web ? '1px solid #00d2ff' : '1px solid rgba(255,255,255,0.05)', backgroundColor: platforms.web ? 'rgba(0, 210, 255, 0.1)' : '#141418', cursor: 'pointer' }}>
               <input type="checkbox" checked={platforms.web} onChange={() => togglePlatform('web')} style={{ marginTop: 4, cursor: 'pointer' }} />
               <div style={{ marginLeft: 12, display: 'flex', flexDirection: 'column' }}>
                 <span style={{ color: 'white', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}><Globe size={16} /> Web (HTML5)</span>
-                <span style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Playable directly in browsers (Community Edition)</span>
+                <span style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Playable directly in browsers</span>
               </div>
             </label>
             
