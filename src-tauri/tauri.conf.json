@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "anon-studio-nce",
+  "productName": "anon-studio-ce",
   "version": "0.1.0",
-  "identifier": "com.hanym.anon-studio-nce",
+  "identifier": "com.anon.ce",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",

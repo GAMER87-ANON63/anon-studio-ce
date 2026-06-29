@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    anon_studio_nce_lib::run()
+    anon_studio_ce_lib::run()
 }
